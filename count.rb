@@ -9,10 +9,13 @@ result_dir = "#{File.expand_path(File.dirname(__FILE__))}/result/"
 
 result_file_name = "result-#{Time.now.strftime('%Y%m%d-%H%M%S')}.txt"
 
+# TODO ファイルの順番
+
 Dir.chdir(files_dir)
 Dir::glob("*.txt").each do |read_file_name|
   # initialize
   count_center = Array.new(frame_num) { 0.0 }
+  count_center_per_min = Array.new(time_min) { 0.0 }
   count_error = 0
   error_flag = false
 
@@ -50,7 +53,15 @@ Dir::glob("*.txt").each do |read_file_name|
 
         unless x < (width * Rational(1,4)).to_f || x > (width * Rational(3,4)).to_f || y < (height * Rational(1,4)).to_f || y > (height * Rational(3,4)).to_f
           p "center!"
-          count_center[frame - 1] += 1.0
+          count_center[frame - 1] += 0.5
+
+          1.upto(time_min) do |min|
+            if frame <= (frames_per_sec * 60 * min)
+              count_center_per_min[min - 1] += 0.5
+              break
+            end
+          end
+
         end
       else
         # other
@@ -61,15 +72,13 @@ Dir::glob("*.txt").each do |read_file_name|
 
   p count_center
 
-  # TODO replace 1.0 if count over 1.0
-  raise if count_center.any? { |count| count > 1.0 }
+  # TODO replace 0.5 if count over 0.5
+  raise if count_center.any? { |count| count > 0.5 }
 
-  count_center_sum_frame = count_center.inject(:+)
-  count_center_sum_sec = count_center_sum_frame / 2.0
+  count_center_sum_sec = count_center.inject(:+)
 
   # TODO remove .0
 
-  p "count_center_sum_frame = #{count_center_sum_frame}"
   p "count_center_sum_sec = #{count_center_sum_sec}"
 
   if read_file_name =~ /1.txt$/
@@ -81,5 +90,5 @@ Dir::glob("*.txt").each do |read_file_name|
   end
 
 
-  File.open("#{result_dir}#{result_file_name}", 'a').write("#{trial_name} #{count_center_sum_sec} #{count_error}\n")
+  File.open("#{result_dir}#{result_file_name}", 'a').write("#{trial_name} #{count_center_per_min.join(' ')} #{count_center_sum_sec} #{count_error}\n")
 end
