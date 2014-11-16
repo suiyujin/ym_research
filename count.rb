@@ -48,7 +48,7 @@ Dir::glob("*.txt").each do |read_file_name|
 
         break if frame > frame_num
 
-        unless x < (width * 1/4r).to_f || x > (width * 3/4r).to_f || y < (height * 1/4r).to_f || y > (height * 3/4r).to_f
+        unless x < (width * Rational(1,4)).to_f || x > (width * Rational(3,4)).to_f || y < (height * Rational(1,4)).to_f || y > (height * Rational(3,4)).to_f
           p "center!"
           count_center[frame - 1] += 1.0
         end
