@@ -1,12 +1,12 @@
 class CountYm
-  def initialize(frames_per_sec, time_min, trial_num)
+  def initialize(frames_per_sec, time_min, trial_num, result_dir)
     # initialize params
     @frames_per_sec = frames_per_sec
     @time_min = time_min
     @frame_num = time_min * 60 * frames_per_sec
     @trial_num = trial_num
 
-    @result_dir = "#{File.expand_path(File.dirname(__FILE__))}/result/"
+    @result_dir = result_dir
   end
 
   def write_mouse_name(result_file_name, mouse)
@@ -14,13 +14,15 @@ class CountYm
   end
 
   def write_comma_time_min(result_file_name, trial)
-    File.open("#{@result_dir}#{result_file_name}", 'a') do |result_file|
-      (@time_min + 1).times { result_file.write(",") }
-      result_file.write("\n") if (trial + 1) == @trial_num
-    end
+    File.open("#{@result_dir}#{result_file_name}", 'a') { |result_file| (@time_min + 1).times { result_file.write(",") } }
   end
 
-  def count(read_file_name, result_file_name, mouse, trial)
+  def write_count_center_sum_sec(result_file_name, count_center_sum_sec)
+    count_center_sum_sec = count_center_sum_sec.map { |count| count.to_s.gsub(/\.0$/, '') }
+    File.open("#{@result_dir}#{result_file_name}", 'a') { |result_file| result_file.write("#{count_center_sum_sec.join(',')}\n") }
+  end
+
+  def count(read_file_name, result_file_name, mouse, trial, count_center_sum_sec)
     # initialize
     count_center = Array.new(@frame_num) { 0.0 }
     count_center_per_min = Array.new(@time_min) { 0.0 }
@@ -78,25 +80,23 @@ class CountYm
 
     # TODO replace 0.5 if count over 0.5
     raise if count_center.any? { |count| count > 0.5 }
-    count_center_sum_sec = count_center.inject(:+)
+    count_center_sum_sec[trial] += count_center.inject(:+)
 
     # remove .0
     count_center_per_min = count_center_per_min.map { |count| count.to_s.gsub(/\.0$/, '') }
 
-    p "count_center_sum_sec = #{count_center_sum_sec}"
+    p "count_center_sum_sec[#{trial}] = #{count_center_sum_sec[trial]}"
 
-    File.open("#{@result_dir}#{result_file_name}", 'a') do |result_file|
-      result_file.write("#{count_center_per_min.join(',')},,")
-      result_file.write("\n") if (trial + 1) == @trial_num
-    end
+    File.open("#{@result_dir}#{result_file_name}", 'a') { |result_file| result_file.write("#{count_center_per_min.join(',')},,") }
   end
 end
 
 frames_per_sec = 2
 time_min = 4
 trial_num = 5
+result_dir = "#{File.expand_path(File.dirname(__FILE__))}/result/"
 
-count_ym = CountYm.new(frames_per_sec, time_min, trial_num)
+count_ym = CountYm.new(frames_per_sec, time_min, trial_num, result_dir)
 
 files_dir = "#{File.expand_path(File.dirname(__FILE__))}/files/"
 
@@ -114,6 +114,8 @@ mouses.each do |mouse|
   result_file_name = result_file_empty_name
   count_ym.write_mouse_name(result_file_name, mouse)
 
+  count_center_sum_sec = Array.new(trial_num) { 0.0 }
+
   # write result of trial
   trial_num.times do |trial|
     if file_names.include?("#{mouse}#{alphabets[trial]}1.txt")
@@ -124,15 +126,20 @@ mouses.each do |mouse|
       read_file_name = "#{mouse}#{alphabets[trial]}e.txt"
     else
       count_ym.write_comma_time_min(result_file_name, trial)
+      count_center_sum_sec[trial] = ''
       next
     end
 
-    count_ym.count(read_file_name, result_file_name, mouse, trial)
+    count_ym.count(read_file_name, result_file_name, mouse, trial, count_center_sum_sec)
   end
+
+  count_ym.write_count_center_sum_sec(result_file_name, count_center_sum_sec)
 
   ##### Stim #####
   result_file_name = result_file_stim_name
   count_ym.write_mouse_name(result_file_name, mouse)
+
+  count_center_sum_sec = Array.new(trial_num) { 0.0 }
 
   # write result of trial
   trial_num.times do |trial|
@@ -144,9 +151,12 @@ mouses.each do |mouse|
       read_file_name = "#{mouse}#{alphabets[trial]}s.txt"
     else
       count_ym.write_comma_time_min(result_file_name, trial)
+      count_center_sum_sec[trial] = ''
       next
     end
 
-    count_ym.count(read_file_name, result_file_name, mouse, trial)
+    count_ym.count(read_file_name, result_file_name, mouse, trial, count_center_sum_sec)
   end
+
+  count_ym.write_count_center_sum_sec(result_file_name, count_center_sum_sec)
 end
